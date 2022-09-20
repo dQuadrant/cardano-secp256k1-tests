@@ -1,0 +1,22 @@
+cabal-version:      2.4
+name:               cardano-secp256k1-tests
+version:            1.0.0.0
+license:            Apache-2.0
+license-files:
+  LICENSE
+
+maintainer: Dquadrant
+author: Dquadrant Team
+
+executable secp-tests
+    main-is: Main.hs
+    hs-source-dirs: tests
+    other-modules:
+
+    build-depends:
+        aeson
+        , base                  >=4.9 && <5
+        , bytestring
+        , plutus-core
+        , text
+
