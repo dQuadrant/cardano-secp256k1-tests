@@ -17,6 +17,6 @@ executable secp-tests
         aeson
         , base                  >=4.9 && <5
         , bytestring
-        , plutus-core
+        , cardano-crypto-class
         , text
 
