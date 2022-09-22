@@ -12,6 +12,9 @@ executable secp-tests
     main-is: Main.hs
     hs-source-dirs: tests
     other-modules:
+      EcdsaSecp256k1Tests
+      SchnorrSecp256k1Tests
+      Utils
 
     build-depends:
         aeson
@@ -19,4 +22,6 @@ executable secp-tests
         , bytestring
         , cardano-crypto-class
         , text
+        , utf8-string
+        , random-bytestring
 
