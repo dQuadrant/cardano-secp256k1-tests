@@ -1,6 +1,6 @@
 Cardano Secp-256k1 Tests
 
-With the support added to cardano to sign and verify using secp 256k1 curve this repo tries to validate the functionality correctness.
+With the support added to cardano to sign and verify using secp 256k1 curve this repo tries to validate the functionality correctness using simple IO tests.
 
 Tests are present in **/tests** folder
 
