@@ -8,5 +8,5 @@ Tests are present in **/tests** folder
 To run the tests run the below command, it is used as an executable instead of cabal test to facilitate output printing without extra configuration.
 
 `
-cabal run secp-tests
+cabal run secp256-tests
 `
