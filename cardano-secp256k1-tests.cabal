@@ -8,20 +8,41 @@ license-files:
 maintainer: Dquadrant
 author: Dquadrant Team
 
-executable secp-tests
-    main-is: Main.hs
-    hs-source-dirs: tests
-    other-modules:
-      EcdsaSecp256k1Tests
-      SchnorrSecp256k1Tests
-      Utils
+executable secp256-tests
+  main-is: Main.hs
+  hs-source-dirs: unit-tests
+  other-modules:
+    Test.EcdsaSecp256k1Tests
+    Test.SchnorrSecp256k1Tests
+    Util.Utils
+  build-depends:
+      aeson
+      , base                  >=4.9 && <5
+      , bytestring
+      , cardano-crypto-class
+      , text
+      , utf8-string
+      , random-bytestring
+      , tasty
+      , tasty-hunit
 
-    build-depends:
-        aeson
-        , base                  >=4.9 && <5
-        , bytestring
-        , cardano-crypto-class
-        , text
-        , utf8-string
-        , random-bytestring
+
+test-suite secp-tests
+  type: exitcode-stdio-1.0
+  main-is: Test.hs
+  hs-source-dirs: unit-tests
+  other-modules:
+    Test.EcdsaSecp256k1Tests
+    Test.SchnorrSecp256k1Tests
+    Util.Utils
+  build-depends:
+      aeson
+      , base                  >=4.9 && <5
+      , bytestring
+      , cardano-crypto-class
+      , text
+      , utf8-string
+      , random-bytestring
+      , tasty
+      , tasty-hunit
 
