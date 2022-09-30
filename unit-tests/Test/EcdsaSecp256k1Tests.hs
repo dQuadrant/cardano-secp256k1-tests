@@ -145,7 +145,7 @@ signAndVerify sKey msgBs = do
         vKey = deriveVerKeyDSIGN sKey
         result = verifyDSIGN () vKey mh signature
     case result of 
-        Left err -> (vKey, mh, signature, False) 
+        Left err -> (vKey, mh, signature, False)
         Right _ -> (vKey, mh, signature, True)
 
 messageHashLengthValidityCheck:: ByteString -> Bool
