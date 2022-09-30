@@ -94,7 +94,7 @@ tests =
     ]
 
 signAndVerifyTest :: TestTree
-signAndVerifyTest = testCase "should sign and verify successfully" $ do
+signAndVerifyTest = testCase "should return True by signing and verifying successfully" $ do
     sKey <- getSignKey
     msgBs <- random 64
     let (_,_,_,result) = signAndVerify sKey msgBs
