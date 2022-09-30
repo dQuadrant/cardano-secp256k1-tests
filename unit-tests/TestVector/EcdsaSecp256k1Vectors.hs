@@ -71,7 +71,7 @@ testClass = "EcdsaSecp256k1Vectors"
 
 type CsvResult = (String,String,String, String,String,String)
 
-convertResultToCsvRecord :: String -> String ->SignatureResult -> CsvResult
+convertResultToCsvRecord :: String -> String ->EcdsaSignatureResult -> CsvResult
 convertResultToCsvRecord sKey msg result@(vKey, mh, sig, veriResult) = (sKey, toHex vKey 6,msg, toHex (fromMessageHash mh) 4, toHex sig 4, show veriResult)
 
 
@@ -88,7 +88,7 @@ testVectorsIO = do
     (sKey7,vKey7,msg7,mh7,sig7,result7) <- wrongVerificationKeyTestVector1
     (sKey8,vKey8,msg8,mh8,result8) <- verificationKeyNotOnCurveTestVector1
     (sKey9,vKey9,msg9,mh9,sig9,result9) <- wrongMessageRightSignatureTestVector1
-    (sKey10,vKey10,msg10,mh10,sig10,result10) <- wrongSignatureRightMessageTestVector1
+    (sKey10,vKey10,msg10,mh10,sig10,result10) <- rightMessageWrongSignatureTestVector1
 
 
     let finalResult = [
@@ -109,7 +109,7 @@ testVectorsIO = do
 
 signVerifyTestVector1 :: IO CsvResult
 signVerifyTestVector1 = do
-    let sKey = "edf2096014005e578ce620019a83c85f1a843be00f02a3e7a0e68de5528d9c3b"
+    let sKey = "EDF2096014005E578CE620019A83C85F1A843BE00F02A3E7A0E68DE5528D9C3B"
         msg = "0000000000000000000000000000000000000000000000000000000000000000"
     result <- signAndVerifyTestVector sKey msg
     pure $ convertResultToCsvRecord sKey msg result
@@ -183,13 +183,13 @@ wrongMessageRightSignatureTestVector1 = do
     result <- wrongMessageRightSignature sKey msgBs
     pure $ convertResultToCsvRecord sKeyStr msg result
 
-wrongSignatureRightMessageTestVector1 :: IO CsvResult
-wrongSignatureRightMessageTestVector1 = do
+rightMessageWrongSignatureTestVector1 :: IO CsvResult
+rightMessageWrongSignatureTestVector1 = do
     let sKeyStr = "9F432B2677937381AEF05BB02A66ECD012773062CF3FA2549E44F58ED240171E"
         msg = "243F6A8885A308D313198A2E03707344A4093822299F31D0082EFA98EC4E6C89"
         msgBs = BSU.fromString msg    
     sKey <- parseHexSignKey sKeyStr
-    result <- wrongSignatureRightMessage sKey msgBs
+    result <- rightMessageWrongSignature sKey msgBs
     pure $ convertResultToCsvRecord sKeyStr msg result
 
 --TODO write test matching left right
@@ -208,7 +208,7 @@ wrongSignatureRightMessageTestVector1 = do
 -- wrongMessageSignatureTest :: TestTree
 -- wrongMessageSignatureTest = testCase "should return Left error when trying to use wrong message and signature." wrongMessageSignature
 
-wrongVerificationKeyTestVector :: String -> String -> String -> IO SignatureResult
+wrongVerificationKeyTestVector :: String -> String -> String -> IO EcdsaSignatureResult
 wrongVerificationKeyTestVector sKeyStr wrongVKeyStr msg = do
     sKey <- parseHexSignKey sKeyStr
     wrongVKey <- parseHexVerKey wrongVKeyStr
@@ -216,7 +216,7 @@ wrongVerificationKeyTestVector sKeyStr wrongVKeyStr msg = do
     pure $ wrongVerificationKey sKey wrongVKey msgBs
 
 
-signAndVerifyTestVector :: String -> String -> IO SignatureResult
+signAndVerifyTestVector :: String -> String -> IO EcdsaSignatureResult
 signAndVerifyTestVector sKeyStr msg = do
     sKey <- parseHexSignKey sKeyStr
     let msgBs = BSU.fromString msg    

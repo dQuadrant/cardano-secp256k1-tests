@@ -60,6 +60,8 @@ import Data.Either (isRight)
 
 testClass = "EcdsaSecp256k1Tests"
 
+type EcdsaSignatureResult = (VerKeyDSIGN EcdsaSecp256k1DSIGN, MessageHash, SigDSIGN EcdsaSecp256k1DSIGN, Bool)
+
 getSignKey :: IO (SignKeyDSIGN EcdsaSecp256k1DSIGN)
 getSignKey = do
     seed <- readSeedFromSystemEntropy 32
@@ -83,16 +85,16 @@ parseHexVerKey vKeyHex = do
         Left _ -> error "Error: Couldn't deserialise verification key."
         Right vKey -> pure vKey
 
--- tests :: TestTree
--- tests =
---     testGroup "EcdsaSecp256k1 Test" [
+tests :: TestTree
+tests =
+    testGroup "EcdsaSecp256k1 Test" [
 --         signAndVerifyTest,
 --         invalidLengthMessageHashTest,
 --         validLengthMessageHashTest,
 --         wrongVerificationKeyTest,
 --         wrongMessageRightSignatureTest,
---         wrongSignatureRightMessageTest
---     ]
+--         rightMessageWrongSignatureTest
+    ]
 
 -- testsIO :: IO ()
 -- testsIO = do
@@ -106,7 +108,7 @@ parseHexVerKey vKeyHex = do
 --     validLengthMessageHash sKey validMsgHash
 --     wrongVerificationKey sKey msgBs
 --     wrongMessageRightSignature sKey msgBs
---     wrongSignatureRightMessage sKey msgBs
+--     rightMessageWrongSignature sKey msgBs
 
 
 --TODO write test matching left right
@@ -125,11 +127,11 @@ parseHexVerKey vKeyHex = do
 -- wrongMessageRightSignatureTest :: TestTree
 -- wrongMessageRightSignatureTest = testCase "should return Left error when trying to use wrong message and signature." wrongMessageRightSignature
 
--- wrongSignatureRightMessageTest :: TestTree
--- wrongSignatureRightMessageTest = testCase "should return Left error when trying to use wrong message and signature." wrongSignatureRightMessage
+-- rightMessageWrongSignatureTest :: TestTree
+-- rightMessageWrongSignatureTest = testCase "should return Left error when trying to use wrong message and signature." rightMessageWrongSignature
 
 
-signAndVerify :: SignKeyDSIGN EcdsaSecp256k1DSIGN -> ByteString -> SignatureResult
+signAndVerify :: SignKeyDSIGN EcdsaSecp256k1DSIGN -> ByteString -> EcdsaSignatureResult
 signAndVerify sKey msgBs = do
     let mh = hashAndPack (Proxy @SHA3_256) msgBs 
         signature = signDSIGN () mh sKey
@@ -157,7 +159,7 @@ validLengthMessageHash sKey validMsgHash = do
                 error "Error Parsed message hash is not of length 32."
                 else putStrLn $ "\n"++testClass++": validLengthMessageHashTest: Working: length 32 is accepted.\n"
 
-wrongVerificationKey :: SignKeyDSIGN EcdsaSecp256k1DSIGN -> VerKeyDSIGN EcdsaSecp256k1DSIGN -> ByteString -> SignatureResult
+wrongVerificationKey :: SignKeyDSIGN EcdsaSecp256k1DSIGN -> VerKeyDSIGN EcdsaSecp256k1DSIGN -> ByteString -> EcdsaSignatureResult
 wrongVerificationKey sKey wrongVKey msgBs = do
     let mh = hashAndPack (Proxy @SHA3_256) msgBs 
         signature = signDSIGN () mh sKey
@@ -166,7 +168,7 @@ wrongVerificationKey sKey wrongVKey msgBs = do
         Left err -> (wrongVKey, mh, signature, False) 
         Right _ -> (wrongVKey, mh, signature, True)
 
-wrongMessageRightSignature :: SignKeyDSIGN EcdsaSecp256k1DSIGN -> ByteString -> IO SignatureResult
+wrongMessageRightSignature :: SignKeyDSIGN EcdsaSecp256k1DSIGN -> ByteString -> IO EcdsaSignatureResult
 wrongMessageRightSignature sKey msgBs = do
     msgBs' <- random 64
     let mh = hashAndPack (Proxy @SHA3_256) msgBs 
@@ -178,8 +180,8 @@ wrongMessageRightSignature sKey msgBs = do
         Left err -> pure (vKey,mh2,signature,False)
         Right _ -> pure (vKey,mh2,signature,True)
 
-wrongSignatureRightMessage :: SignKeyDSIGN EcdsaSecp256k1DSIGN -> ByteString -> IO SignatureResult
-wrongSignatureRightMessage sKey msgBs = do
+rightMessageWrongSignature :: SignKeyDSIGN EcdsaSecp256k1DSIGN -> ByteString -> IO EcdsaSignatureResult
+rightMessageWrongSignature sKey msgBs = do
     msgBs' <- random 64
     let mh = hashAndPack (Proxy @SHA3_256) msgBs 
     let mh2 = hashAndPack (Proxy @SHA3_256) msgBs'
