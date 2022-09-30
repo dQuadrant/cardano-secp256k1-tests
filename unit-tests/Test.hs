@@ -7,7 +7,7 @@ main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
-tests = testGroup "cardano-marketplace" [
-         EcdsaSecp256k1Tests.tests,
-         SchnorrSecp256k1Tests.tests
+tests = testGroup "Secp-256k1 tests" [
+         EcdsaSecp256k1Tests.tests
+     --     SchnorrSecp256k1Tests.tests
     ]

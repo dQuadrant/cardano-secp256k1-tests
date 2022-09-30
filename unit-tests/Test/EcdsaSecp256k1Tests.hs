@@ -38,9 +38,8 @@ import Cardano.Crypto.DSIGN (
   VerKeyDSIGN,
   SigDSIGN
   )
-
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase)
+import Test.Tasty
+import Test.Tasty.HUnit
 import     Cardano.Crypto.Hash.SHA3_256 (SHA3_256)
 import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)
@@ -53,9 +52,7 @@ import Cardano.Binary (FromCBOR(fromCBOR), ToCBOR(toCBOR), serialize', decodeFul
 import Util.Utils
 import Util.Parsers
 import qualified Data.ByteString.Lazy as BSL
-
 import qualified Data.Csv as Csv
-
 import Data.Either (isRight)
 
 testClass = "EcdsaSecp256k1Tests"
@@ -88,47 +85,57 @@ parseHexVerKey vKeyHex = do
 tests :: TestTree
 tests =
     testGroup "EcdsaSecp256k1 Test" [
---         signAndVerifyTest,
---         invalidLengthMessageHashTest,
---         validLengthMessageHashTest,
---         wrongVerificationKeyTest,
---         wrongMessageRightSignatureTest,
---         rightMessageWrongSignatureTest
+        signAndVerifyTest,
+        invalidLengthMessageHashTest,
+        validLengthMessageHashTest,
+        wrongVerificationKeyTest,
+        wrongMessageRightSignatureTest,
+        rightMessageWrongSignatureTest
     ]
 
--- testsIO :: IO ()
--- testsIO = do
---     sKey <- getSignKey
---     msgBs <- random 64
---     validMsgHash <- random 32
---     invalidMsgHash <- random 30
-    
---     if isRight $ signAndVerify sKey msgBs
---     invalidLengthMessageHash sKey invalidMsgHash
---     validLengthMessageHash sKey validMsgHash
---     wrongVerificationKey sKey msgBs
---     wrongMessageRightSignature sKey msgBs
---     rightMessageWrongSignature sKey msgBs
+signAndVerifyTest :: TestTree
+signAndVerifyTest = testCase "should sign and verify successfully" $ do
+    sKey <- getSignKey
+    msgBs <- random 64
+    let (_,_,_,result) = signAndVerify sKey msgBs
+    assertBool "Verification failed." result
+
+invalidLengthMessageHashTest :: TestTree
+invalidLengthMessageHashTest = testCase "should return False when parsing invalid length message hash." $ do
+    invalidMsgHash <- random 31
+    let result = messageHashLengthValidityCheck invalidMsgHash
+    assertBool "Failed invalid message hash length is 31." $ not result
+
+validLengthMessageHashTest :: TestTree
+validLengthMessageHashTest = testCase "should return True when message hash with valid length used." $ do
+    validMsgHash <- random 32
+    let result = messageHashLengthValidityCheck validMsgHash
+    assertBool "Failed valid message hash length is treated as invalid." result
+
+wrongVerificationKeyTest :: TestTree
+wrongVerificationKeyTest = testCase "should return False when trying to use wrong verification key." $ do
+    sKey <- getSignKey
+    sKey2 <- getSignKey
+    let vKey2 = deriveVerKeyDSIGN sKey2
+    msgBs <- random 64
+    let (_,_,_,result) = wrongVerificationKey sKey vKey2 msgBs
+    assertBool "Failed when using wrong message it verified successfully. Which should not be the case. " $ not result
 
 
---TODO write test matching left right
--- signAndVerifyTest :: TestTree
--- signAndVerifyTest = testCase "should sign and verify successfully" $ isRight $ signAndVerify
+wrongMessageRightSignatureTest :: TestTree
+wrongMessageRightSignatureTest = testCase "should return False when trying to use wrong message and but right signature." $ do
+    sKey <- getSignKey
+    msgBs <- random 64
+    (_,_,_,result) <- wrongMessageRightSignature sKey msgBs
+    assertBool "Failed when using wrong message it verified successfully. Which should not be the case. " $ not result
 
--- invalidLengthMessageHashTest :: TestTree
--- invalidLengthMessageHashTest = testCase "should return Nothing when parsing invalid length message hash." invalidLengthMessageHash
 
--- validLengthMessageHashTest :: TestTree
--- validLengthMessageHashTest = testCase "should return correct message hash with valid length." validLengthMessageHash
-
--- wrongVerificationKeyTest :: TestTree
--- wrongVerificationKeyTest = testCase "should return Left error when trying to use wrong verification key." wrongVerificationKey
-
--- wrongMessageRightSignatureTest :: TestTree
--- wrongMessageRightSignatureTest = testCase "should return Left error when trying to use wrong message and signature." wrongMessageRightSignature
-
--- rightMessageWrongSignatureTest :: TestTree
--- rightMessageWrongSignatureTest = testCase "should return Left error when trying to use wrong message and signature." rightMessageWrongSignature
+rightMessageWrongSignatureTest :: TestTree
+rightMessageWrongSignatureTest = testCase "should return False when trying to use right message but wrong signature." $ do
+    sKey <- getSignKey
+    msgBs <- random 64
+    (_,_,_,result) <- rightMessageWrongSignature sKey msgBs
+    assertBool "Failed wrong signature verified successfully. Which should not be the case. " $ not result
 
 
 signAndVerify :: SignKeyDSIGN EcdsaSecp256k1DSIGN -> ByteString -> EcdsaSignatureResult
@@ -141,23 +148,14 @@ signAndVerify sKey msgBs = do
         Left err -> (vKey, mh, signature, False) 
         Right _ -> (vKey, mh, signature, True)
 
-invalidLengthMessageHashCheck:: ByteString -> Bool
-invalidLengthMessageHashCheck invalidMsgHash = do
-    let mh = toMessageHash invalidMsgHash
-    case mh of
-        Nothing -> False
-        Just _ -> True
-
-validLengthMessageHash:: SignKeyDSIGN EcdsaSecp256k1DSIGN -> ByteString -> IO ()
-validLengthMessageHash sKey validMsgHash = do
+messageHashLengthValidityCheck:: ByteString -> Bool
+messageHashLengthValidityCheck validMsgHash = do
     let mh = toMessageHash $ validMsgHash
     case mh of
-        Nothing -> error $ testClass ++ ": toMessageHash function failed it shouldn't be as correct length is provided."
+        Nothing -> False
         Just mh' -> do
             let mhBs = fromMessageHash mh'
-            if BS.length mhBs /= 32 then 
-                error "Error Parsed message hash is not of length 32."
-                else putStrLn $ "\n"++testClass++": validLengthMessageHashTest: Working: length 32 is accepted.\n"
+            if BS.length mhBs == 32 then True else False
 
 wrongVerificationKey :: SignKeyDSIGN EcdsaSecp256k1DSIGN -> VerKeyDSIGN EcdsaSecp256k1DSIGN -> ByteString -> EcdsaSignatureResult
 wrongVerificationKey sKey wrongVKey msgBs = do
