@@ -142,7 +142,7 @@ wrongLengthHashTestVector1 = do
         sKeyStr = "C90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B14E5C9"
     sKey <- parseHexSignKey sKeyStr
     let vKey = deriveVerKeyDSIGN sKey
-    let result = invalidLengthMessageHashCheck hashBs
+    let result = messageHashLengthValidityCheck hashBs
     pure (sKeyStr,toHex vKey 6, hashStr, show result)
 
 wrongLengthHashTestVector2 :: IO (String,String,String,String)
@@ -152,7 +152,7 @@ wrongLengthHashTestVector2 = do
         sKeyStr = "C90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B14E5C9"
     sKey <- parseHexSignKey sKeyStr
     let vKey = deriveVerKeyDSIGN sKey
-    let result = invalidLengthMessageHashCheck hashBs
+    let result = messageHashLengthValidityCheck hashBs
     pure (sKeyStr,toHex vKey 6, hashStr, show result)
 
 wrongVerificationKeyTestVector1 :: IO CsvResult
