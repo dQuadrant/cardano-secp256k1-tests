@@ -8,6 +8,6 @@ main = defaultMain tests
 
 tests :: TestTree
 tests = testGroup "Secp-256k1 tests" [
-         EcdsaSecp256k1Tests.tests
-     --     SchnorrSecp256k1Tests.tests
+         EcdsaSecp256k1Tests.tests,
+         SchnorrSecp256k1Tests.tests
     ]
