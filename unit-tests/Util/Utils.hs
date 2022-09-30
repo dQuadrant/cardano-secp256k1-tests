@@ -33,3 +33,6 @@ unHex = BS16.decode
 -- Convert byteString to String
 byteStringToString :: ByteString -> String
 byteStringToString = T.unpack . T.decodeUtf8
+
+toHexByteString :: ByteString -> ByteString
+toHexByteString = BS16.encode
