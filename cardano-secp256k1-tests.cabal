@@ -15,16 +15,26 @@ executable secp256-tests
     Test.EcdsaSecp256k1Tests
     Test.SchnorrSecp256k1Tests
     Util.Utils
+    Util.Parsers
+    TestVector.EcdsaSecp256k1Vectors
+    TestVector.SchnorrSecp256k1Vectors
+
   build-depends:
       aeson
       , base                  >=4.9 && <5
       , bytestring
       , cardano-crypto-class
       , text
+      , text-conversions
       , utf8-string
       , random-bytestring
       , tasty
       , tasty-hunit
+      , serialise
+      , cardano-binary
+      , base16-bytestring
+      , cassava
+
 
 
 test-suite secp-tests
@@ -35,14 +45,24 @@ test-suite secp-tests
     Test.EcdsaSecp256k1Tests
     Test.SchnorrSecp256k1Tests
     Util.Utils
+    Util.Parsers
+    TestVector.EcdsaSecp256k1Vectors
+    TestVector.SchnorrSecp256k1Vectors
+
   build-depends:
       aeson
       , base                  >=4.9 && <5
       , bytestring
       , cardano-crypto-class
       , text
+      , text-conversions
       , utf8-string
       , random-bytestring
       , tasty
       , tasty-hunit
+      , serialise
+      , cardano-binary
+      , base16-bytestring
+      , cassava
+
 
