@@ -77,16 +77,6 @@ parseHexVerKey vKeyHex = do
         Right vKey -> pure vKey
 
 
--- testsIO :: IO ()
--- testsIO = do
---     sKey <- getSignKey
---     msgBs <- random 64
-
---     signAndVerify sKey msgBs
---     wrongVerificationKey sKey msgBs
---     wrongMessageRightSignature sKey msgBs
---     rightMessageWrongSignature sKey msgBs
-
 tests :: TestTree
 tests =
     testGroup "SchnorrSecp256k1 Test" [
