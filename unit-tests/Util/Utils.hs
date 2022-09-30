@@ -29,3 +29,7 @@ toHex a dropFront = T.unpack $ T.decodeUtf8 $ BS.drop dropFront $ BS16.encode $ 
 --Convert bas16 to raw bytes
 unHex :: ByteString -> Either String ByteString
 unHex = BS16.decode
+
+-- Convert byteString to String
+byteStringToString :: ByteString -> String
+byteStringToString = T.unpack . T.decodeUtf8

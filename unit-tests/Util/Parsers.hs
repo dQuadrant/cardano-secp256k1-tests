@@ -47,8 +47,6 @@ import Data.ByteString.Random (random)
 import Cardano.Binary (FromCBOR(fromCBOR), ToCBOR(toCBOR), serialize', decodeFull',DecoderError)
 import Util.Utils
 
-type SignatureResult = (VerKeyDSIGN EcdsaSecp256k1DSIGN, MessageHash, SigDSIGN EcdsaSecp256k1DSIGN, Bool)
-
 convertToBytes :: String -> String -> IO ByteString
 convertToBytes prefix hexStr = do 
     let hexBs = BSU.fromString $ prefix ++ hexStr
