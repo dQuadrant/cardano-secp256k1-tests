@@ -35,8 +35,8 @@ import Cardano.Crypto.DSIGN (
   hashAndPack,
   )
 
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase)
+import Test.Tasty
+import Test.Tasty.HUnit
 import Cardano.Crypto.Hash.SHA3_256 (SHA3_256)
 import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)
@@ -51,7 +51,7 @@ import Cardano.Binary (FromCBOR(fromCBOR), ToCBOR(toCBOR), serialize', decodeFul
 
 testClass = "SchnorrSecp256k1Tests"
 
-type SchnorrSignatureResult = (VerKeyDSIGN SchnorrSecp256k1DSIGN, String, SigDSIGN SchnorrSecp256k1DSIGN, Bool)
+type SchnorrSignatureResult = (VerKeyDSIGN SchnorrSecp256k1DSIGN, SigDSIGN SchnorrSecp256k1DSIGN, Bool)
 
 getSignKey :: IO (SignKeyDSIGN SchnorrSecp256k1DSIGN)
 getSignKey = do
@@ -76,67 +76,79 @@ parseHexVerKey vKeyHex = do
         Left _ -> error "Error: Couldn't deserialise verification key."
         Right vKey -> pure vKey
 
-
 tests :: TestTree
 tests =
     testGroup "SchnorrSecp256k1 Test" [
---         signAndVerifyTest,
---         wrongVerificationKeyTest,
---         wrongMessageRightSignatureTest,
---         rightMessageWrongSignatureTest,
+        signAndVerifyTest,
+        wrongVerificationKeyTest,
+        wrongMessageRightSignatureTest,
+        rightMessageWrongSignatureTest
     ]
 
--- signAndVerifyTest :: TestTree
--- signAndVerifyTest = testCase "should sign and verify successfully" signAndVerify
+signAndVerifyTest :: TestTree
+signAndVerifyTest = testCase "should return True by signing and verifying successfully" $ do
+    sKey <- getSignKey
+    msgBs <- random 64
+    let (_,_,result) = signAndVerify sKey msgBs
+    assertBool "Verification failed." result
 
--- wrongVerificationKeyTest :: TestTree
--- wrongVerificationKeyTest = testCase "should return Left error when trying to use wrong verification key." wrongVerificationKey
+wrongVerificationKeyTest :: TestTree
+wrongVerificationKeyTest = testCase "should return False when trying to use wrong verification key." $ do
+    sKey <- getSignKey
+    sKey2 <- getSignKey
+    let vKey2 = deriveVerKeyDSIGN sKey2
+    msgBs <- random 64
+    let (_,_,result) = wrongVerificationKey sKey vKey2 msgBs
+    assertBool "Failed when using wrong message it verified successfully. Which should not be the case. " $ not result
 
--- wrongMessageRightSignatureTest :: TestTree
--- wrongMessageRightSignatureTest = testCase "should return Left error when trying to use wrong message and signature." wrongMessageRightSignature
+wrongMessageRightSignatureTest :: TestTree
+wrongMessageRightSignatureTest = testCase "should return False when trying to use wrong message and but right signature." $ do
+    sKey <- getSignKey
+    msgBs <- random 64
+    wrongMsgBs <- random 64
+    (_,_,result) <- wrongMessageRightSignature sKey msgBs wrongMsgBs
+    assertBool "Failed when using wrong message it verified successfully. Which should not be the case. " $ not result
 
--- rightMessageWrongSignatureTest :: TestTree
--- rightMessageWrongSignatureTest = testCase "should return Left error when trying to use wrong message and signature." rightMessageWrongSignature
+rightMessageWrongSignatureTest :: TestTree
+rightMessageWrongSignatureTest = testCase "should return False when trying to use right message but wrong signature." $ do
+    sKey <- getSignKey
+    msgBs <- random 64
+    (_,_,result) <- rightMessageWrongSignature sKey msgBs
+    assertBool "Failed wrong signature verified successfully. Which should not be the case. " $ not result
 
-
-signAndVerify :: SignKeyDSIGN SchnorrSecp256k1DSIGN -> String -> SchnorrSignatureResult
-signAndVerify sKey msg = do
-    let msgBs = BSU.fromString msg
-        signature = signDSIGN () msgBs sKey
+signAndVerify :: SignKeyDSIGN SchnorrSecp256k1DSIGN -> ByteString -> SchnorrSignatureResult
+signAndVerify sKey msgBs = do
+    let signature = signDSIGN () msgBs sKey
         vKey = deriveVerKeyDSIGN sKey
         result = verifyDSIGN () vKey msgBs signature
     case result of 
-        Left err -> (vKey, msg, signature, False) 
-        Right _ -> (vKey, msg, signature, True)
+        Left err -> (vKey, signature, False) 
+        Right _ -> (vKey, signature, True)
 
-wrongVerificationKey :: SignKeyDSIGN SchnorrSecp256k1DSIGN -> VerKeyDSIGN SchnorrSecp256k1DSIGN -> String -> SchnorrSignatureResult
-wrongVerificationKey sKey wrongVKey msg = do
-    let msgBs = BSU.fromString msg
-        signature = signDSIGN () msgBs sKey
+wrongVerificationKey :: SignKeyDSIGN SchnorrSecp256k1DSIGN -> VerKeyDSIGN SchnorrSecp256k1DSIGN -> ByteString -> SchnorrSignatureResult
+wrongVerificationKey sKey wrongVKey msgBs = do
+    let signature = signDSIGN () msgBs sKey
         result = verifyDSIGN () wrongVKey msgBs signature
     case result of 
-        Left err -> (wrongVKey, msg, signature, False) 
-        Right _ -> (wrongVKey, msg, signature, True)
+        Left err -> (wrongVKey, signature, False) 
+        Right _ -> (wrongVKey, signature, True)
 
-wrongMessageRightSignature ::SignKeyDSIGN SchnorrSecp256k1DSIGN -> String -> IO SchnorrSignatureResult
-wrongMessageRightSignature sKey msg = do
-    msgBs' <- random 64
-    let msgBs = BSU.fromString msg
-        signature = signDSIGN () msgBs sKey
+wrongMessageRightSignature ::SignKeyDSIGN SchnorrSecp256k1DSIGN -> ByteString -> ByteString -> IO SchnorrSignatureResult
+wrongMessageRightSignature sKey msgBs wrongMsgBS = do
+    let signature = signDSIGN () msgBs sKey
         vKey = deriveVerKeyDSIGN sKey
-        result = verifyDSIGN () vKey msgBs' signature
+        result = verifyDSIGN () vKey wrongMsgBS signature
     case result of 
-        Left err -> pure (vKey, toHex msgBs' 0, signature, False) 
-        Right _ -> pure (vKey, toHex msgBs' 0, signature, True)
+        Left err -> pure (vKey, signature, False) 
+        Right _ -> pure (vKey, signature, True)
 
-rightMessageWrongSignature ::SignKeyDSIGN SchnorrSecp256k1DSIGN -> String -> IO SchnorrSignatureResult
-rightMessageWrongSignature sKey msg = do
+rightMessageWrongSignature :: SignKeyDSIGN SchnorrSecp256k1DSIGN -> ByteString -> IO SchnorrSignatureResult
+rightMessageWrongSignature sKey msgBs = do
     msgBs' <- random 64
-    let msgBs = BSU.fromString msg
-        signature1 = signDSIGN () msgBs sKey
+    let signature1 = signDSIGN () msgBs sKey
         signature2 = signDSIGN () msgBs' sKey
         vKey = deriveVerKeyDSIGN sKey
         result = verifyDSIGN () vKey msgBs signature2
     case result of 
-        Left err -> pure (vKey, msg, signature2, False) 
-        Right _ -> pure (vKey, msg, signature2, True)
+        Left err -> pure (vKey, signature2, False) 
+        Right _ -> pure (vKey, signature2, True)
