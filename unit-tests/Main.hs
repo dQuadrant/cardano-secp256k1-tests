@@ -16,6 +16,7 @@ where
 import qualified Test.EcdsaSecp256k1Tests as EcdsaSecp256k1Tests
 import qualified TestVector.EcdsaSecp256k1Vectors as EcdsaSecp256k1Vectors
 import qualified Test.SchnorrSecp256k1Tests as SchnorrSecp256k1Tests
+import qualified TestVector.SchnorrSecp256k1Vectors as SchnorrSecp256k1Vectors
 import GHC.IO.Handle.FD (stdout)
 import System.IO (BufferMode (NoBuffering), hSetBuffering)
 
@@ -27,6 +28,8 @@ main = do
     EcdsaSecp256k1Vectors.testVectorsIO
     putStrLn "\n----------------------------------------------------------------------------------------"
     -- SchnorrSecp256k1Tests.testsIO
+    SchnorrSecp256k1Vectors.testVectorsIO
+
 
 
 
