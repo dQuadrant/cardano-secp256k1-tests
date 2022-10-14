@@ -47,7 +47,12 @@ import Util.Utils
 import Util.Parsers
 import Cardano.Crypto.Seed(readSeedFromSystemEntropy)
 import Data.ByteString.Random (random)
-import Cardano.Binary (FromCBOR(fromCBOR), ToCBOR(toCBOR), serialize', decodeFull',DecoderError)
+import Cardano.Binary (FromCBOR(fromCBOR), ToCBOR(toCBOR), serialize', decodeFull',DecoderError(..))
+import Data.Either (isRight,isLeft)
+import Control.Monad(void)
+import Data.Typeable (typeOf)
+import Codec.CBOR.Read (DeserialiseFailure(..))
+import Data.List (isInfixOf)
 
 testClass = "SchnorrSecp256k1Tests"
 
@@ -68,19 +73,18 @@ parseHexSignKey sKeyHex = do
         Right sKey -> pure sKey
 
 -- Convert vKeyInHex to appropirate vKey
-parseHexVerKey :: String -> IO (VerKeyDSIGN SchnorrSecp256k1DSIGN)
+parseHexVerKey :: String -> IO (Either DecoderError (VerKeyDSIGN SchnorrSecp256k1DSIGN))
 parseHexVerKey vKeyHex = do
     vKeyBytes <- convertToBytes "5820" vKeyHex
-    let vKeyE = decodeFull' vKeyBytes
-    case vKeyE of 
-        Left _ -> error "Error: Couldn't deserialise verification key."
-        Right vKey -> pure vKey
+    pure $ decodeFull' vKeyBytes
 
 tests :: TestTree
 tests =
     testGroup "SchnorrSecp256k1 Test" [
         signAndVerifyTest,
         wrongVerificationKeyTest,
+        invalidLengthVerificationKeyTest,
+        verificationKeyNotOnCurveTest,
         wrongMessageRightSignatureTest,
         rightMessageWrongSignatureTest
     ]
@@ -91,6 +95,28 @@ signAndVerifyTest = testCase "should return True by signing and verifying succes
     msgBs <- random 64
     let (_,_,result) = signAndVerify sKey msgBs
     assertBool "Verification failed." result
+
+
+invalidLengthVerificationKeyTest :: TestTree
+invalidLengthVerificationKeyTest = testCase "should return wrong length error when invalid verification key length used." $ do
+    let invalidLengthVKey = "D69C3509BB99E412E68B0FE8544E72837DFA30746D8BE2AA65975F29D22D"
+    result <- parseHexVerKey invalidLengthVKey
+    assertBool "Failed invalid length verification key is treated as valid." $ isLeft result
+    case result of
+        -- TODO Not helpful error message is returned for now need to raise the readability
+        Left (DecoderErrorDeserialiseFailure _ (DeserialiseFailure _ err)) -> assertEqual "Expected end of input error returned." "end of input"  err
+        Right _ -> error "Error result is right which should not be the case."
+
+verificationKeyNotOnCurveTest :: TestTree
+verificationKeyNotOnCurveTest = testCase "should return decode length error when verification key not present on curve used." $ do
+    let invalidVKey = "EEFDEA4CDB677750A420FEE807EACF21EB9898AE79B9768766E4FAA04A2D4A34"
+    result <- parseHexVerKey invalidVKey
+    assertBool "Failed invalid verification key is treated as valid." $ isLeft result
+    case result of
+        -- TODO Not helpful error message is returned for now
+        Left (DecoderErrorDeserialiseFailure _ (DeserialiseFailure _ err)) -> assertBool "Expected cannot decode key error." $ isInfixOf "cannot decode key"  err
+        Right _ -> error "Error result is right which should not be the case."
+
 
 wrongVerificationKeyTest :: TestTree
 wrongVerificationKeyTest = testCase "should return False when trying to use wrong verification key." $ do

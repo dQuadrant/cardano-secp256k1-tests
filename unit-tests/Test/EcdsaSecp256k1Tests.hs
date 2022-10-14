@@ -48,12 +48,16 @@ import Data.Typeable (typeOf)
 import Data.Proxy (Proxy (..))
 import Cardano.Crypto.Seed(readSeedFromSystemEntropy)
 import Data.ByteString.Random (random)
-import Cardano.Binary (FromCBOR(fromCBOR), ToCBOR(toCBOR), serialize', decodeFull',DecoderError)
+import Cardano.Binary (FromCBOR(fromCBOR), ToCBOR(toCBOR), serialize', decodeFull',DecoderError(..))
 import Util.Utils
 import Util.Parsers
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Csv as Csv
-import Data.Either (isRight)
+import Data.Either (isRight,isLeft)
+import Control.Monad(void)
+import Data.Typeable (typeOf)
+import Codec.CBOR.Read (DeserialiseFailure(..))
+import Data.List (isInfixOf)
 
 testClass = "EcdsaSecp256k1Tests"
 
@@ -70,17 +74,14 @@ parseHexSignKey sKeyHex = do
     sKeyBytes <- convertToBytes "5820" sKeyHex
     let sKeyE = decodeFull' sKeyBytes
     case sKeyE of 
-        Left _ -> error "Error: Couldn't deserialise signing key."
+        Left err -> error err
         Right sKey -> pure sKey
 
 -- Convert vKeyInHex to appropirate vKey
-parseHexVerKey :: String -> IO (VerKeyDSIGN EcdsaSecp256k1DSIGN)
+parseHexVerKey :: String -> IO (Either DecoderError (VerKeyDSIGN EcdsaSecp256k1DSIGN))
 parseHexVerKey vKeyHex = do
     vKeyBytes <- convertToBytes "582102" vKeyHex
-    let vKeyE = decodeFull' vKeyBytes
-    case vKeyE of 
-        Left _ -> error "Error: Couldn't deserialise verification key."
-        Right vKey -> pure vKey
+    pure $ decodeFull' vKeyBytes
 
 tests :: TestTree
 tests =
@@ -88,6 +89,8 @@ tests =
         signAndVerifyTest,
         invalidLengthMessageHashTest,
         validLengthMessageHashTest,
+        invalidLengthVerificationKeyTest,
+        verificationKeyNotOnCurveTest,
         wrongVerificationKeyTest,
         wrongMessageRightSignatureTest,
         rightMessageWrongSignatureTest
@@ -112,6 +115,26 @@ validLengthMessageHashTest = testCase "should return True when message hash with
     let result = messageHashLengthValidityCheck validMsgHash
     assertBool "Failed valid message hash length is treated as invalid." result
 
+invalidLengthVerificationKeyTest :: TestTree
+invalidLengthVerificationKeyTest = testCase "should return wrong length error when invalid verification key length used." $ do
+    let invalidLengthVKey = "D69C3509BB99E412E68B0FE8544E72837DFA30746D8BE2AA65975F29D22D"
+    result <- parseHexVerKey invalidLengthVKey
+    assertBool "Failed invalid length verification key is treated as valid." $ isLeft result
+    case result of
+        -- TODO Not helpful error message is returned for now need to raise the readability
+        Left (DecoderErrorDeserialiseFailure _ (DeserialiseFailure _ err)) -> assertEqual "Expected end of input error returned." "end of input"  err
+        Right _ -> error "Error result is right which should not be the case."
+
+verificationKeyNotOnCurveTest :: TestTree
+verificationKeyNotOnCurveTest = testCase "should return decode length error when verification key not present on curve used." $ do
+    let invalidVKey = "EEFDEA4CDB677750A420FEE807EACF21EB9898AE79B9768766E4FAA04A2D4A34"
+    result <- parseHexVerKey invalidVKey
+    assertBool "Failed invalid verification key is treated as valid." $ isLeft result
+    case result of
+        -- TODO Not helpful error message is returned for now
+        Left (DecoderErrorDeserialiseFailure _ (DeserialiseFailure _ err)) -> assertBool "Expected cannot decode key error." $ isInfixOf "cannot decode key"  err
+        Right _ -> error "Error result is right which should not be the case."
+
 wrongVerificationKeyTest :: TestTree
 wrongVerificationKeyTest = testCase "should return False when trying to use wrong verification key." $ do
     sKey <- getSignKey
@@ -121,7 +144,6 @@ wrongVerificationKeyTest = testCase "should return False when trying to use wron
     let (_,_,_,result) = wrongVerificationKey sKey vKey2 msgBs
     assertBool "Failed when using wrong message it verified successfully. Which should not be the case. " $ not result
 
-
 wrongMessageRightSignatureTest :: TestTree
 wrongMessageRightSignatureTest = testCase "should return False when trying to use wrong message and but right signature." $ do
     sKey <- getSignKey
@@ -129,14 +151,12 @@ wrongMessageRightSignatureTest = testCase "should return False when trying to us
     (_,_,_,result) <- wrongMessageRightSignature sKey msgBs
     assertBool "Failed when using wrong message it verified successfully. Which should not be the case. " $ not result
 
-
 rightMessageWrongSignatureTest :: TestTree
 rightMessageWrongSignatureTest = testCase "should return False when trying to use right message but wrong signature." $ do
     sKey <- getSignKey
     msgBs <- random 64
     (_,_,_,result) <- rightMessageWrongSignature sKey msgBs
     assertBool "Failed wrong signature verified successfully. Which should not be the case. " $ not result
-
 
 signAndVerify :: SignKeyDSIGN EcdsaSecp256k1DSIGN -> ByteString -> EcdsaSignatureResult
 signAndVerify sKey msgBs = do
