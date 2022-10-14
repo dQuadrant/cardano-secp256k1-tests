@@ -34,6 +34,7 @@ executable vector-tests
       , cardano-binary
       , base16-bytestring
       , cassava
+      , cborg
 
 test-suite secp-tests
   type: exitcode-stdio-1.0
@@ -62,8 +63,7 @@ test-suite secp-tests
       , cardano-binary
       , base16-bytestring
       , cassava
-
-
+      , cborg
 
 benchmark secp-bench
   type: exitcode-stdio-1.0
@@ -87,4 +87,5 @@ benchmark secp-bench
       , cardano-binary
       , base16-bytestring
       , tasty-bench
+      , cborg
  
