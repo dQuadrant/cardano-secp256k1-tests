@@ -19,7 +19,6 @@ executable vector-tests
     TestVector.EcdsaSecp256k1Vectors
     TestVector.SchnorrSecp256k1Vectors
     TestVector.Vectors
-
   build-depends:
       aeson
       , base                  >=4.9 && <5
@@ -48,6 +47,7 @@ test-suite secp-tests
     Util.Parsers
     TestVector.EcdsaSecp256k1Vectors
     TestVector.SchnorrSecp256k1Vectors
+    TestVector.Vectors
 
   build-depends:
       aeson

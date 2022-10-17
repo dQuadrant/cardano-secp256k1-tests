@@ -60,8 +60,6 @@ import Codec.CBOR.Read (DeserialiseFailure(..))
 import Data.List (isInfixOf)
 import Control.Exception(throw,SomeException(..),try)
 
-testClass = "EcdsaSecp256k1Tests"
-
 type EcdsaSignatureResult = (VerKeyDSIGN EcdsaSecp256k1DSIGN, MessageHash, SigDSIGN EcdsaSecp256k1DSIGN, Bool)
 
 getSignKey :: IO (SignKeyDSIGN EcdsaSecp256k1DSIGN)
@@ -91,6 +89,7 @@ tests =
         invalidLengthMessageHashTest,
         validLengthMessageHashTest,
         invalidLengthVerificationKeyTest,
+        invalidLengthSignatureTest,
         verificationKeyNotOnCurveTest,
         wrongVerificationKeyTest,
         wrongMessageRightSignatureTest,
@@ -118,12 +117,23 @@ validLengthMessageHashTest = testCase "should return True when message hash with
 
 invalidLengthVerificationKeyTest :: TestTree
 invalidLengthVerificationKeyTest = testCase "should return wrong length error when invalid verification key length used." $ do
-    let invalidLengthVKey = "D69C3509BB99E412E68B0FE8544E72837DFA30746D8BE2AA65975F29D22D"
+    let invalidLengthVKey = "DFF1D77F2A671C5F36183726DB2341BE58FEAE1DA2DECED843240F7B502BA6"
     result <- parseHexVerKey invalidLengthVKey
     assertBool "Failed invalid length verification key is treated as valid." $ isLeft result
     case result of
         -- TODO Not helpful error message is returned for now need to raise the readability
-        Left (DecoderErrorDeserialiseFailure _ (DeserialiseFailure _ err)) -> assertEqual "Expected end of input error returned." "end of input"  err
+        Left (DecoderErrorDeserialiseFailure _ (DeserialiseFailure _ err)) -> assertBool "Expected wrong length error returned." $ isInfixOf "end of input"  err
+        Right _ -> error "Error result is right which should not be the case."
+
+invalidLengthSignatureTest :: TestTree
+invalidLengthSignatureTest = testCase "should return wrong length error when invalid signature length used." $ do
+    let invalidSignature = "c0730606584a92b4a979fdbfbb89a6b304827ab5084e55f61f6c1fbf36cf359b49a8e128aee4bba7fa5b8b0491ba2425aa97a2af668cb4c54fb68dfae8a6756565"
+    signatureBytes <- convertToBytes "5820" invalidSignature
+    let result = decodeFull' signatureBytes :: Either DecoderError (SigDSIGN EcdsaSecp256k1DSIGN)
+    assertBool "Failed invalid length verification key is treated as valid." $ isLeft result
+    case result of
+        -- TODO Not helpful error message is returned for now need to raise the readability
+        Left (DecoderErrorDeserialiseFailure _ (DeserialiseFailure _ err)) -> assertBool "Expected wrong length error returned." $ isInfixOf "decodeSigDSIGN: wrong length, expected 64 bytes but got "  err
         Right _ -> error "Error result is right which should not be the case."
 
 verificationKeyNotOnCurveTest :: TestTree
