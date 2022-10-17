@@ -8,6 +8,8 @@ license-files:
 maintainer: Dquadrant
 author: Dquadrant Team
 
+
+
 executable vector-tests
   main-is: Main.hs
   hs-source-dirs: unit-tests

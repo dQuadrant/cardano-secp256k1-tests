@@ -1,0 +1,46 @@
+cabal-version:      2.4
+name:               secptest-app
+version:            1.0.0.0
+license:            Apache-2.0
+license-files:
+  LICENSE
+
+maintainer: Dquadrant
+author: Dquadrant Team
+
+
+
+executable secptest-app 
+  hs-source-dirs:       src
+  main-is:
+    Main.hs
+  build-depends:
+          base ^>=4.14.3.0
+        , containers
+        , bytestring
+        , serialise
+        , cborg
+        , text
+        , aeson
+        , text-conversions
+        , cardano-api
+        , cardano-ledger-babbage
+        , cardano-ledger-alonzo
+        , cardano-ledger-shelley
+        , cardano-slotting
+        , plutus-ledger-api
+        , plutus-tx
+        , ouroboros-network
+        , cardano-binary
+        , vector
+        , unordered-containers
+        , time
+        , cardano-api
+        , plutus-tx
+        , plutus-tx-plugin
+        , secptest-plutus
+        , cmdargs >= 0.10.18
+        , kuber
+        ,cardano-crypto-class
+        , random-bytestring
+
