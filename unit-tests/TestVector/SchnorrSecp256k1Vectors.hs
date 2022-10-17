@@ -125,7 +125,7 @@ signAndVerifyTestVector (sKey, vKey, msg) = do
 verifyOnlyTestVector :: (String,String,String,String) -> IO CsvResult
 verifyOnlyTestVector (sKeyStr, vKeyStr, msg, sigStr)= do
     result <- verifyOnlyWithSigTestVector sKeyStr vKeyStr msg sigStr
-    pure (sKeyStr,vKeyStr, msg, sigStr, show result)
+    pure (sKeyStr,vKeyStr, msg, sigStr, show $ snd result)
 
 -- Use another verification to verify the message sign by another sign key
 wrongVerificationKeyTestVector :: String -> IO CsvResult

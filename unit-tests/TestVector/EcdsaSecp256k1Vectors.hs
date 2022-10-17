@@ -145,7 +145,7 @@ signAndVerifyTestVector (sKey, vKey, msg) = do
 verifyOnlyTestVector :: (String,String,String,String) -> IO CsvResult
 verifyOnlyTestVector (sKeyStr, vKeyStr, msg, sigStr)= do
     result <- verifyOnlyWithSigTestVector sKeyStr vKeyStr msg sigStr
-    pure ("",vKeyStr, msg, toHex (fromMessageHash $ hashMessage msg) 4, sigStr, show result)
+    pure ("",vKeyStr, msg, toHex (fromMessageHash $ hashMessage msg) 4, sigStr, show $ snd result)
 
 -- Pass invalid length message hash in signing stage
 wrongSignMessageHashLengthTestVector :: String -> IO CsvResult
