@@ -40,7 +40,7 @@ import Cardano.Crypto.DSIGN (
   )
 import Test.Tasty
 import Test.Tasty.HUnit
-import     Cardano.Crypto.Hash.SHA3_256 (SHA3_256)
+import Cardano.Crypto.Hash.SHA3_256 (SHA3_256)
 import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.UTF8 as BSU      -- from utf8-string
@@ -127,13 +127,14 @@ invalidLengthVerificationKeyTest = testCase "should return wrong length error wh
 
 invalidLengthSignatureTest :: TestTree
 invalidLengthSignatureTest = testCase "should return wrong length error when invalid signature length used." $ do
-    let invalidSignature = "c0730606584a92b4a979fdbfbb89a6b304827ab5084e55f61f6c1fbf36cf359b49a8e128aee4bba7fa5b8b0491ba2425aa97a2af668cb4c54fb68dfae8a6756565"
-    signatureBytes <- convertToBytes "5820" invalidSignature
+    let invalidSignature = "c0730606584a92b4a979fdbfbb89a6b304827ab5084e55f61f6c1fbf36cf359b49a8e128aee4bba7fa5b8b0491ba2425aa97a2af668cb4c54fb68dfae8a675"
+    signatureBytes <- convertToBytes "5840" invalidSignature
     let result = decodeFull' signatureBytes :: Either DecoderError (SigDSIGN EcdsaSecp256k1DSIGN)
     assertBool "Failed invalid length verification key is treated as valid." $ isLeft result
+    print result
     case result of
         -- TODO Not helpful error message is returned for now need to raise the readability
-        Left (DecoderErrorDeserialiseFailure _ (DeserialiseFailure _ err)) -> assertBool "Expected wrong length error returned." $ isInfixOf "decodeSigDSIGN: wrong length, expected 64 bytes but got "  err
+        Left (DecoderErrorDeserialiseFailure _ (DeserialiseFailure _ err)) -> assertEqual "Expected wrong length error returned." "end of input"  err
         Right _ -> error "Error result is right which should not be the case."
 
 verificationKeyNotOnCurveTest :: TestTree

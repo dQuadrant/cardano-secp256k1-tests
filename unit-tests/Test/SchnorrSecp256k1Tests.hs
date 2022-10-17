@@ -98,12 +98,12 @@ signAndVerifyTest = testCase "should return True by signing and verifying succes
 invalidLengthSignatureTest :: TestTree
 invalidLengthSignatureTest = testCase "should return wrong length error when invalid signature length used." $ do
     let invalidSignature = "8c29c80b168a3b7a6fa90bb17785e25205ff09bc01616115b00f81a17d1eb6dbea1a0c02aa138a7b2af1557fb762d0d9e6d8742adff4013c7d064612ebc27f"
-    signatureBytes <- convertToBytes "5820" invalidSignature
+    signatureBytes <- convertToBytes "5840" invalidSignature
     let result = decodeFull' signatureBytes :: Either DecoderError (SigDSIGN SchnorrSecp256k1DSIGN)
     assertBool "Failed invalid length verification key is treated as valid." $ isLeft result
     case result of
         -- TODO Not helpful error message is returned for now need to raise the readability
-        Left (DecoderErrorDeserialiseFailure _ (DeserialiseFailure _ err)) -> assertBool "Expected wrong length error returned." $ isInfixOf "decodeSigDSIGN: wrong length, expected 64 bytes but got "  err
+        Left (DecoderErrorDeserialiseFailure _ (DeserialiseFailure _ err)) -> assertEqual "Expected wrong length error returned." "end of input"  err
         Right _ -> error "Error result is right which should not be the case."
 
 invalidLengthVerificationKeyTest :: TestTree

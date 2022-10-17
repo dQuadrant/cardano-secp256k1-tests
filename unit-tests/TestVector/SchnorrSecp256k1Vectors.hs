@@ -37,9 +37,9 @@ import Cardano.Crypto.DSIGN (
   VerKeyDSIGN,
   SigDSIGN
   )
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase)
-import     Cardano.Crypto.Hash.SHA3_256 (SHA3_256)
+import Test.Tasty
+import Test.Tasty.HUnit
+import  Cardano.Crypto.Hash.SHA3_256 (SHA3_256)
 import qualified Data.ByteString as BS
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.UTF8 as BSU      -- from utf8-string
@@ -47,7 +47,7 @@ import Data.Typeable (typeOf)
 import Data.Proxy (Proxy (..))
 import Cardano.Crypto.Seed(readSeedFromSystemEntropy)
 import Data.ByteString.Random (random)
-import Cardano.Binary (FromCBOR(fromCBOR), ToCBOR(toCBOR), serialize', decodeFull',DecoderError)
+import Cardano.Binary (FromCBOR(fromCBOR), ToCBOR(toCBOR), serialize', decodeFull',DecoderError(..))
 import Util.Utils
 import Util.Parsers
 import qualified Data.ByteString.Lazy as BSL
@@ -55,6 +55,10 @@ import qualified Data.Csv as Csv
 import Data.Either (isRight)
 import Control.Exception(throw,SomeException(..),try)
 import TestVector.Vectors
+import Data.List (isInfixOf)
+import Codec.CBOR.Read (DeserialiseFailure(..))
+
+
               --  skey    vkey    msg     sig     result
 type CsvResult = (String, String, String, String, String)
 
@@ -107,8 +111,9 @@ testVectorsIO = do
             ("12", "",   vKey12, msg12, "", sig12, result12, "Invalid signature length is used. Verification should be false."),
             ("13", "",   vKey13, msg13, "", sig13, result13, "Invalid signature length is used. Verification should be false.")
             ]
-    print finalResult
     BSL.writeFile "schnorr-secp256k1-test-vectors.csv" $ Csv.encode finalResult
+
+    print "Done"
 
 --Whole sign and verify flow test vector
 signAndVerifyTestVector :: (String, String, String) -> IO CsvResult
@@ -151,17 +156,29 @@ rightMessageWrongSignatureTestVector (signMsg,verifyMsg,signature) = do
 -- Use invalid verification key length and try to verify using vkey msg and signature only
 invalidLengthVerificationKeyTestVector :: String -> IO CsvResult
 invalidLengthVerificationKeyTestVector invalidVKey = do
-    result <- try (verifyOnlyWithSigTestVector defaultSKey invalidVKey defaultMessage defaultSchnorrSignature) :: IO (Either SomeException SchnorrSignatureResult)
-    case result of
-        Left err -> pure $ (defaultSKey, invalidVKey, defaultMessage, defaultSchnorrSignature,"False")
+    result <- try (verifyOnlyWithSigTestVector defaultSKey invalidVKey defaultMessage defaultSchnorrSignature) :: IO (Either DecoderError SchnorrSignatureResult)
+    case result of 
+        Left ex -> do
+            case ex of 
+                DecoderErrorLeftover _ leftOverValue -> do
+                    assertBool "Error Leftovervalue must be as specified in vectors."  $ isInfixOf defaultLeftOverValueConvertedForDecoderError (show leftOverValue)
+                DecoderErrorDeserialiseFailure _ (DeserialiseFailure _ err) -> do
+                    assertBool "Expected end of input error." $ isInfixOf insufficientLengthError  err
+            pure $ (defaultSKey, invalidVKey, defaultMessage, defaultSchnorrSignature,"False")
         Right result' -> error "Test failed. Sign and verified when using verification not on the curve should not be successful."
 
 -- Parse exsiting invalid signature and try to verify using vkey msg and signature only
 invalidLengthSignatureTestVector :: (String,String,String,String) -> IO CsvResult
 invalidLengthSignatureTestVector (sKeyStr, vKeyStr, msg, sigStr) = do
-    result <- try (verifyOnlyWithSigTestVector sKeyStr vKeyStr msg sigStr) :: IO (Either SomeException SchnorrSignatureResult)
+    result <- try (verifyOnlyWithSigTestVector sKeyStr vKeyStr msg sigStr) :: IO (Either DecoderError SchnorrSignatureResult)
     case result of
-        Left err -> pure (sKeyStr,vKeyStr, msg, sigStr, "False")
+        Left ex -> do
+            case ex of 
+                DecoderErrorLeftover _ leftOverValue -> do
+                    assertBool "Error Leftovervalue must be as specified in vectors."  $ isInfixOf defaultLeftOverValueConvertedForDecoderError (show leftOverValue)
+                DecoderErrorDeserialiseFailure _ (DeserialiseFailure _ err) -> do
+                    assertBool "Expected end of input error." $ isInfixOf insufficientLengthError  err
+            pure (sKeyStr,vKeyStr, msg, sigStr, "False")
         Right result' -> error "Test failed. Sign and verified when using verification not on the curve should not be successful."
 
 -- Simple sign and verify test vector function with sKey, vKey and message in string
@@ -218,7 +235,7 @@ parseSchnorrSignKey sKeyHex = do
 -- Convert sigInHex to appropirate signature
 parseSchnorrSignature :: String -> IO (SigDSIGN SchnorrSecp256k1DSIGN)
 parseSchnorrSignature sigHex = do
-    sigBytes <- convertToBytes "5820" sigHex
+    sigBytes <- convertToBytes "5840" sigHex
     let sigE = decodeFull' sigBytes :: Either DecoderError (SigDSIGN SchnorrSecp256k1DSIGN)
     case sigE of 
         Left err -> throw err

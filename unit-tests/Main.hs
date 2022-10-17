@@ -24,10 +24,8 @@ main :: IO ()
 main = do
     hSetBuffering stdout NoBuffering
     putStrLn "\ESC[32m"
-    -- EcdsaSecp256k1Tests.testsIO
     EcdsaSecp256k1Vectors.testVectorsIO
     putStrLn "\n----------------------------------------------------------------------------------------"
-    -- SchnorrSecp256k1Tests.testsIO
     SchnorrSecp256k1Vectors.testVectorsIO
 
 
