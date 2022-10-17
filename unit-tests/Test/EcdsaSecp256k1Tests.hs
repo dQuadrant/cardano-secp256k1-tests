@@ -58,6 +58,7 @@ import Control.Monad(void)
 import Data.Typeable (typeOf)
 import Codec.CBOR.Read (DeserialiseFailure(..))
 import Data.List (isInfixOf)
+import Control.Exception(throw,SomeException(..),try)
 
 testClass = "EcdsaSecp256k1Tests"
 
@@ -74,7 +75,7 @@ parseHexSignKey sKeyHex = do
     sKeyBytes <- convertToBytes "5820" sKeyHex
     let sKeyE = decodeFull' sKeyBytes
     case sKeyE of 
-        Left err -> error err
+        Left err -> throw err
         Right sKey -> pure sKey
 
 -- Convert vKeyInHex to appropirate vKey
