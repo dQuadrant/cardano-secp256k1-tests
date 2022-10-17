@@ -18,6 +18,7 @@ executable vector-tests
     Util.Parsers
     TestVector.EcdsaSecp256k1Vectors
     TestVector.SchnorrSecp256k1Vectors
+    TestVector.Vectors
 
   build-depends:
       aeson
