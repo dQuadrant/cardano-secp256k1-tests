@@ -8,8 +8,8 @@ license-files:
 maintainer: Dquadrant
 author: Dquadrant Team
 
-executable vector-tests
-  main-is: Main.hs
+executable vector
+  main-is: Test.hs
   hs-source-dirs: vector-tests
   other-modules:
     Test.EcdsaSecp256k1Tests
