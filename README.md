@@ -4,6 +4,8 @@ With the support added to cardano to sign and verify using secp 256k1 curve this
 
 Unit Tests and Test Vectors are present in **/unit-tests** folder.
 
+[Testing Plutus contract On Local cluster](./secptest-app/Readme.md)
+
 Benchmark code is present in **/benchmarks** folder.
 
 To run the unit tests type the below command, and verify output.

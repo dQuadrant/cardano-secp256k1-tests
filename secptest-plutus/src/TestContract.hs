@@ -35,33 +35,37 @@ import qualified PlutusTx
 
 type Signature = BuiltinByteString
 
-newtype SecpTestRedeemer = SecpTestRedeemer Signature
+data SecpTestRedeemer = 
+      SecpTestRedeemerWithSig Signature  -- redeem by verifying signature
+    | SecpTestSkipRedeemer         -- force redeem utxo without verifying signature (For testing purpose)
     deriving (Generic,Show,Prelude.Eq)
-PlutusTx.makeIsDataIndexed ''SecpTestRedeemer [('SecpTestRedeemer, 0)]
+PlutusTx.makeIsDataIndexed ''SecpTestRedeemer [('SecpTestRedeemerWithSig, 0), ('SecpTestSkipRedeemer,1)]
 
 
 data SecpTestDatum=SecpTestDatum{
     testDatumData :: BuiltinByteString,
-    testDatumPubKey :: BuiltinByteString  -- cost of the value in it
+    testDatumPubKey :: BuiltinByteString  
   } deriving(Show,Generic)
 
 
 PlutusTx.makeIsDataIndexed ''SecpTestDatum [('SecpTestDatum, 0)]    
 
--- verifyEd25519Signature :: BuiltinByteString -> BuiltinByteString -> BuiltinByteString -> BuiltinBool
--- verifyEd25519Signature (BuiltinByteString pubKey) (BuiltinByteString message) (BuiltinByteString signature) 
 
 {-# INLINABLE mkValidator #-}
 mkValidator ::  SecpTestDatum   -> SecpTestRedeemer -> ScriptContext    -> Bool
-mkValidator (SecpTestDatum testDatumData testDatumPubKey)  (SecpTestRedeemer testDatumSignature) ctx = 
-  traceIfFalse "Redeemer doesn't have the correct signature"  (verifyEd25519Signature testDatumPubKey testDatumData testDatumSignature )
+mkValidator (SecpTestDatum testDatumData testDatumPubKey)   (SecpTestRedeemerWithSig testDatumSignature) ctx =  
+  traceIfFalse 
+      "Redeemer doesn't have the correct signature"  
+      (verifyEcdsaSecp256k1Signature  testDatumPubKey testDatumData testDatumSignature )
+
+mkValidator _   SecpTestSkipRedeemer ctx = True
 
 
 {-# INLINABLE mkWrappedValidator #-}
 mkWrappedValidator ::  BuiltinData -> BuiltinData -> BuiltinData -> ()
-mkWrappedValidator  d r c = check $ mkValidator (parseData d "Invalid data") (parseData r "Invalid redeemer") (unsafeFromBuiltinData c)
+mkWrappedValidator  d r c = check $ mkValidator (parseData d "Invalid data") (parseData r "Invalid redeemer") (parseData  c "InvalidContext")
   where
-    parseData md s = case fromBuiltinData  md of 
+    parseData md s = case fromBuiltinData  md of
       Just datum -> datum
       Nothing      -> traceError s
 
@@ -73,7 +77,7 @@ testScript ::   Script
 testScript  =  unValidatorScript  testValidator
 
 testScriptSBS :: SBS.ShortByteString
-testScriptSBS  =  SBS.toShort . LBS.toStrict $ serialise $ testScript 
+testScriptSBS  =  SBS.toShort . LBS.toStrict $ serialise $ testScript
 
 testScriptPlutusV2 ::  PlutusScript PlutusScriptV2
 testScriptPlutusV2  = PlutusScriptSerialised $ testScriptSBS
