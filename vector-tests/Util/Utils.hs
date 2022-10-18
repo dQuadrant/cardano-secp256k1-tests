@@ -1,24 +1,26 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
-
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Util.Utils
+  ( toHex,
+    unHex,
+    byteStringToString,
+    toHexByteString,
+    convertToBytes,
+  )
 where
 
-import Data.ByteString ( ByteString )
+import Cardano.Binary (ToCBOR, serialize')
+import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as BS16
-import Cardano.Binary (ToCBOR, serialize')
+import qualified Data.ByteString.UTF8 as BSU -- from utf8-string
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 
@@ -36,3 +38,11 @@ byteStringToString = T.unpack . T.decodeUtf8
 
 toHexByteString :: ByteString -> ByteString
 toHexByteString = BS16.encode
+
+convertToBytes :: String -> String -> IO ByteString
+convertToBytes prefix hexStr = do
+  let hexBs = BSU.fromString $ prefix ++ hexStr
+  let bytesE = unHex hexBs
+  case bytesE of
+    Left _ -> error "Error: Couldn't unHex the Hex string. Incorrect format."
+    Right bytes' -> pure bytes'

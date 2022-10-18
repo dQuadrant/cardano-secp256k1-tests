@@ -10,12 +10,11 @@ author: Dquadrant Team
 
 executable vector-tests
   main-is: Main.hs
-  hs-source-dirs: unit-tests
+  hs-source-dirs: vector-tests
   other-modules:
     Test.EcdsaSecp256k1Tests
     Test.SchnorrSecp256k1Tests
     Util.Utils
-    Util.Parsers
     TestVector.EcdsaSecp256k1Vectors
     TestVector.SchnorrSecp256k1Vectors
     TestVector.Vectors
@@ -38,20 +37,18 @@ executable vector-tests
 
 test-suite secp-tests
   type: exitcode-stdio-1.0
-  main-is: Test.hs
-  hs-source-dirs: unit-tests
+  main-is: Main.hs
+  hs-source-dirs: vector-tests
   other-modules:
     Test.EcdsaSecp256k1Tests
     Test.SchnorrSecp256k1Tests
     Util.Utils
-    Util.Parsers
     TestVector.EcdsaSecp256k1Vectors
     TestVector.SchnorrSecp256k1Vectors
     TestVector.Vectors
 
   build-depends:
-      aeson
-      , base                  >=4.9 && <5
+      base                  >=4.9 && <5
       , bytestring
       , cardano-crypto-class
       , text
