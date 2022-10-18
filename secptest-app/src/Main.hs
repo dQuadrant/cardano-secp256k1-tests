@@ -20,8 +20,8 @@ import qualified Data.ByteString.Char8 as BS
 import Cardano.Crypto.DSIGN
     ( MessageHash,
       DSIGNAlgorithm(signDSIGN, SigDSIGN, SignKeyDSIGN,
-                     deriveVerKeyDSIGN, genKeyDSIGN),
-      EcdsaSecp256k1DSIGN, hashAndPack, fromMessageHash )
+                     deriveVerKeyDSIGN, genKeyDSIGN, VerKeyDSIGN),
+      EcdsaSecp256k1DSIGN, hashAndPack, fromMessageHash, verifyDSIGN, toMessageHash )
 import Cardano.Crypto.Seed (readSeedFromSystemEntropy)
 import Data.ByteString.Random (random)
 import Cardano.Kuber.Util (toHexString)
@@ -37,13 +37,16 @@ import qualified TestContract as TextContract
 import Cardano.Crypto.Hash (hashFromBytes)
 import Cardano.Crypto.Hash.SHA3_256 (SHA3_256)
 import Data.Typeable (Proxy(..))
-import Cardano.Api (TxIn(..))
+import Cardano.Api (TxIn(..), ExecutionUnits (ExecutionUnits))
 import Control.Concurrent (threadDelay)
+import Data.ByteString (ByteString)
+import PlutusTx.Builtins (verifyEd25519Signature)
 
 data Modes =
       Emulate {
         signKeyFile:: String,
-        address :: Maybe Text
+        address :: Maybe Text,
+        noPreVerify:: Bool
         }
     |   Cat
       deriving (Show, Data, Typeable)
@@ -55,14 +58,14 @@ runCli = do
     op <- cmdArgs $ modes [
         Emulate{
             signKeyFile = def &=typ "SignkeyFilePath" ,
-            address = def &=typ "WalletAddress"
-
+            address = def &=typ "WalletAddress",
+            noPreVerify = def &=typ "Pre-Verify"
         }
         ,Cat
         ]
 
     case op of
-      Emulate signkeyFile mAddr -> do
+      Emulate signkeyFile mAddr noPreVerify -> do
         sKey<- T.readFile signkeyFile >>= parseSignKey
         walletConstraint<- case mAddr of
           Nothing -> pure $ txWalletSignKey sKey
@@ -77,12 +80,17 @@ runCli = do
             messageHashBs = fromMessageHash messageHashNative
             ecdsaVkey = deriveVerKeyDSIGN ecdsaSignKey
             signedData = ecdsaSign ecdsaSignKey messageHashNative
-
+        
+        if  noPreVerify  || ecdsaVerify (serialiseByteString ecdsaVkey) messageHashBs (serialiseByteString signedData)
+          then pure()
+          else do
+              putStrLn $ "ecdsaVerify " ++ (toHexString $ serialiseByteString ecdsaVkey) ++ " " ++ toHexString  messageHashBs ++ " " ++ toHexString (serialiseByteString signedData)
+              fail "Error pre-validating signature using plutus function"
         putStrLn $ "secp256k1 SignKey:" ++ show ecdsaSignKey
         putStrLn $ "messageHash: " ++ toHexString messageHashBs
         let lockedDatum = TestContract.SecpTestDatum {
                 testDatumData = toBuiltin  messageHashBs
-              , testDatumPubKey = toBuiltin $  BS.drop 2 $ serialize'  ecdsaVkey
+              , testDatumPubKey = toBuiltin $  serialiseByteString ecdsaVkey
               }
             tx1Builder = walletConstraint <> txPayToScriptWithData scriptAddr  mempty (fromPlutusData $ toData lockedDatum)
         putStrLn $ "Step1: Lock funds to the contract :"
@@ -97,15 +105,18 @@ runCli = do
                   pure txId)
           )
         putStrLn $ "Waiting 10 seconds for transaction confirmation ..."
-        threadDelay 10000000 
-        let redeemer= TextContract.SecpTestRedeemer (toBuiltin $  BS.drop 2 $ serialize'  signedData)
-            tx2Builder= walletConstraint <> txRedeemTxin (TxIn txId $ TxIx 1) (toTxPlutusScript TestContract.testScriptPlutusV2) (fromPlutusData $ toData redeemer) Nothing 
+        threadDelay 10000000
+        let redeemer= TextContract.SecpTestRedeemer (toBuiltin $ serialiseByteString  signedData)
+            tx2Builder= walletConstraint
+              <>  txRedeemTxin (TxIn txId $ TxIx 0)
+                      (toTxPlutusScript TestContract.testScriptPlutusV2)
+                      (fromPlutusData $ toData redeemer) (Just $ ExecutionUnits 6000000000 10000000)
         putStrLn $ "Step2: Redeem funds from contract :"
         BS.putStrLn  $ prettyPrintJSON tx2Builder
         txId<-txBuilderToTxIO nodeInfo tx2Builder >>= (\case
-           Left fe -> throw fe
+           Left fe -> putStrLn "txBuildError" >> throw fe
            Right tx -> submitTx (getConnectInfo nodeInfo) tx >>= (\case
-                Left fe -> throw fe
+                Left fe -> putStrLn "txSubmitError" >> throw fe
                 Right x0 ->do
                   let txId =  getTxId $ getTxBody tx
                   putStrLn $ "Tx Submitted :" ++ show txId
@@ -115,7 +126,7 @@ runCli = do
 
       Cat ->    let textEnvelope = serialiseToTextEnvelope Nothing (PlutusScript PlutusScriptV2 $ TestContract.testScriptPlutusV2)
                 in  putStrLn $ BS8.unpack (A.encode textEnvelope)
-scriptAddr = plutusScriptAddr (toTxPlutusScript $ TestContract.testScriptPlutusV2) Mainnet
+scriptAddr = plutusScriptAddr (toTxPlutusScript  TestContract.testScriptPlutusV2) Mainnet
 
 
 genEcdsaSignKey :: IO (SignKeyDSIGN EcdsaSecp256k1DSIGN)
@@ -125,3 +136,16 @@ genEcdsaSignKey = do
 
 ecdsaSign :: SignKeyDSIGN EcdsaSecp256k1DSIGN -> MessageHash -> SigDSIGN EcdsaSecp256k1DSIGN
 ecdsaSign sKey mh = signDSIGN () mh sKey
+
+--Raw verifiction without hashing message first for this raw bench otherwise one should always hash the message first before verification
+ecdsaVerify' :: VerKeyDSIGN EcdsaSecp256k1DSIGN -> MessageHash -> SigDSIGN EcdsaSecp256k1DSIGN -> ()
+ecdsaVerify' vKey mh sig = let result = verifyDSIGN () vKey mh sig in
+    case result of
+        Left err -> error "Verification failed."
+        Right _ -> ()
+
+ecdsaVerify :: ByteString -> ByteString -> ByteString -> Bool
+ecdsaVerify vKey mh sig = verifyEd25519Signature  (toBuiltin vKey) (toBuiltin  mh) (toBuiltin sig)
+
+serialiseByteString  bs=  serialize'  bs
+-- serialiseByteString = serialize'  

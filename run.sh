@@ -54,6 +54,7 @@ function showCommand() {
 function execute-isolated() {
   echo "+ execute-isolated $*"
   docker run -i -u"$(id -u):$(id -g)" \
+  --rm \
   -v $CABAL_CACHE_DIR:$HOME/.cabal \
   -v $CABAL_CACHE_DIR:/.cabal \
 	-v $DIST_NEWSTYLE_DIR:$WORKDIR/dist-newstyle/ \
