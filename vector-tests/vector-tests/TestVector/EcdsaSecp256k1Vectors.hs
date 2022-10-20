@@ -266,6 +266,7 @@ hashMessage msg = hashAndPack (Proxy @SHA3_256) $ BSU.fromString msg
 -- Convert vKeyInHex to appropirate vKey
 parseEcdsaVerKey :: String -> IO (VerKeyDSIGN EcdsaSecp256k1DSIGN)
 parseEcdsaVerKey vKeyHex = do
+  -- Only even-y cordinate is parsed by this function
   vKeyBytes <- convertToBytes vKeyHex
   let vKeyE = decodeFull' vKeyBytes
   case vKeyE of

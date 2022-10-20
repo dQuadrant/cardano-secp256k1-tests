@@ -100,7 +100,7 @@ wrongVerificationKeyTest = testCase "should return False when trying to use wron
   sKey <- getSignKey
   sKey2 <- getSignKey
   let vKey2 = deriveVerKeyDSIGN sKey2
-  msgBs <- random 64
+  msgBs <- uniformByteStringM 64
   let (_, _, result) = wrongVerificationKey sKey vKey2 msgBs
   assertBool "Test Failed when using wrong message it verified successfully. Which should not be the case. " $ not result
 

@@ -55,7 +55,7 @@ tests =
 type CsvResult = (String, String, String, String, String)
 
 convertResultToCsvRecord :: String -> String -> String -> SchnorrSignatureResult -> CsvResult
-convertResultToCsvRecord sKey vKey msg (sig, veriResult) = (sKey, vKey, msg, toHex sig 4, show veriResult)
+convertResultToCsvRecord sKey vKey msg (sig, veriResult) = (sKey, drop 2 vKey, msg, toHex sig 4, show veriResult)
 
 testVectorsIO :: IO ()
 testVectorsIO = do
@@ -69,14 +69,11 @@ testVectorsIO = do
   -- Vector for verify using already generated signature and public key
   (_, vKey5, msg5, sig5, result5) <- verifyOnlyTestVector (schnorr256k1VKeyAndSigVerifyTestVectors !! 0)
 
-  print wrongVerificationKeyTestVectors
-
-
   -- Vector for wrong verification key used to verify using another signature
   (sKey6, vKey6, msg6, sig6, result6) <- wrongVerificationKeyTestVector (wrongVerificationKeyTestVectors !! 0)
 
   --Vector for verification key used that is not on curve
-  (_, vKey7, msg7, sig7, result7) <- verificationKeyNotOnCurveTestVector (drop 2 $ wrongVerificationKeyTestVectors !! 1)
+  (_, vKey7, msg7, sig7, result7) <- verificationKeyNotOnCurveTestVector (wrongVerificationKeyTestVectors !! 1)
 
   -- Vector for wrong message and signatures
   (sKey8, vKey8, msg8, sig8, result8) <- wrongMessageRightSignatureTestVector (wrongMessagesAndSignaturesTestVectors !! 0)
@@ -118,7 +115,7 @@ signAndVerifyTestVector (sKey, vKey, msg) = do
 verifyOnlyTestVector :: (String, String, String, String) -> IO CsvResult
 verifyOnlyTestVector (sKeyStr, vKeyStr, msg, sigStr) = do
   result <- verifyOnlyWithSigTestVector sKeyStr vKeyStr msg sigStr
-  pure (sKeyStr, vKeyStr, msg, sigStr, show $ snd result)
+  pure (sKeyStr, drop 2 vKeyStr, msg, sigStr, show $ snd result)
 
 -- Use another verification to verify the message sign by another sign key
 wrongVerificationKeyTestVector :: String -> IO CsvResult
@@ -144,8 +141,9 @@ invalidLengthVerificationKeyTestVector invalidVKey = do
   result <- try (verifyOnlyWithSigTestVector defaultSKey invalidVKey defaultMessage defaultSchnorrSignature) :: IO (Either DecoderError SchnorrSignatureResult)
   case result of
     Left (DecoderErrorDeserialiseFailure _ (DeserialiseFailure _ err)) -> do
-      assertEqual "Expected wrong length error." (invalidSchnorrVerificationKeyLengthError invalidVKey) err
-      pure (defaultSKey, invalidVKey, defaultMessage, defaultSchnorrSignature, "False")
+      -- Already dropped first byte when parsing vectors so for error message also drop for invalid verification key
+      assertEqual "Expected wrong length error." (invalidSchnorrVerificationKeyLengthError $ drop 2 invalidVKey) err
+      pure (defaultSKey, drop 2 invalidVKey, defaultMessage, defaultSchnorrSignature, "False")
     Left _ -> error unexpectedDecodingError
     Right _ -> error "Test failed. Sign and verified when using invalid length verification key should not be successful."
 
@@ -156,7 +154,7 @@ invalidLengthSignatureTestVector (sKeyStr, vKeyStr, msg, sigStr) = do
   case result of
     Left (DecoderErrorDeserialiseFailure _ (DeserialiseFailure _ err)) -> do
       assertEqual "Expected wrong length error." (invalidSchnorrSignatureLengthError sigStr) err
-      pure (sKeyStr, vKeyStr, msg, sigStr, "False")
+      pure (sKeyStr, drop 2 vKeyStr, msg, sigStr, "False")
     Left _ -> error unexpectedDecodingError
     Right _ -> error "Test failed. Sign and verified when using invalid length signature should not be successful."
 
@@ -167,7 +165,7 @@ verificationKeyNotOnCurveTestVector wrongVKey = do
   case result of
     Left (DecoderErrorDeserialiseFailure _ (DeserialiseFailure _ err)) -> do
       assertEqual "Expected cannot decode key error." cannotDecodeVerificationKeyError err
-      pure (defaultSKey, wrongVKey, defaultMessage, defaultSchnorrSignature, "False")
+      pure (defaultSKey, drop 2 wrongVKey, defaultMessage, defaultSchnorrSignature, "False")
     Left _ -> error unexpectedDecodingError
     Right _ -> error "Test failed. Sign and verified when using verification not on the curve should not be successful."
 
@@ -207,7 +205,8 @@ schnorrVerify vKeyStr msg sig = do
 -- Convert vKeyInHex to appropirate vKey
 parseSchnorrVerKey :: String -> IO (VerKeyDSIGN SchnorrSecp256k1DSIGN)
 parseSchnorrVerKey vKeyHex = do
-  vKeyBytes <- convertToBytes vKeyHex
+  -- Drop first byte that is not used by schnorr
+  vKeyBytes <- convertToBytes $ drop 2 vKeyHex
   let vKeyE = decodeFull' vKeyBytes
   case vKeyE of
     Left err -> throw err

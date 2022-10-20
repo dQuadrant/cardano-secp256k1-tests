@@ -7,7 +7,7 @@ import qualified TestVector.EcdsaSecp256k1Vectors as EcdsaSecp256k1Vectors
 import qualified TestVector.SchnorrSecp256k1Vectors as SchnorrSecp256k1Vectors
 
 main :: IO ()
-main = SchnorrSecp256k1Vectors.testVectorsIO 
+main = defaultMain tests
 
 tests :: TestTree
 tests =
